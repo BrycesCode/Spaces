@@ -5,7 +5,7 @@ import com.BrycesCode.Spaces.model.User;
 import com.BrycesCode.Spaces.model.VerificationToken;
 import com.BrycesCode.Spaces.repository.UserRepository;
 import com.BrycesCode.Spaces.repository.VerificationTokenRepository;
-import lombok.AllArgsConstructor;
+import jakarta.transaction.Transactional;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -13,6 +13,7 @@ import java.time.Instant;
 import java.util.UUID;
 
 @Service
+@Transactional
 public class AuthService {
 
     private PasswordEncoder _passwordEncoder;
@@ -29,11 +30,12 @@ public class AuthService {
 
     public void signup(RegisterRequest registerRequest){
         User user = new User();
-        user.setUsername(registerRequest.getUsername());
-        user.setEmail(registerRequest.getEmail());
+        user.setUsername(registerRequest.getUsername().toLowerCase());
+        user.setEmail(registerRequest.getEmail().toLowerCase());
         user.setPassword(_passwordEncoder.encode((registerRequest.getPassword())));
         user.setCreated(Instant.now());
         user.setEnabled(false);
+
         _userRepository.save(user);
         String token = generateVerificationToken(user);
     }
