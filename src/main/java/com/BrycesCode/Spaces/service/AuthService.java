@@ -1,16 +1,21 @@
 package com.BrycesCode.Spaces.service;
 
 import com.BrycesCode.Spaces.dto.RegisterRequest;
+import com.BrycesCode.Spaces.exceptions.SpacesException;
 import com.BrycesCode.Spaces.model.NotificationEmail;
 import com.BrycesCode.Spaces.model.User;
 import com.BrycesCode.Spaces.model.VerificationToken;
 import com.BrycesCode.Spaces.repository.UserRepository;
 import com.BrycesCode.Spaces.repository.VerificationTokenRepository;
 import jakarta.transaction.Transactional;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import javax.swing.text.html.Option;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -48,13 +53,28 @@ public class AuthService {
 
 
     }
-
     private String generateVerificationToken(User user) {
         String token = UUID.randomUUID().toString();
         VerificationToken verificationToken = new VerificationToken();
         verificationToken.setToken(token);
         verificationToken.setUser(user);
         _verificationTokenRepository.save(verificationToken);
+        verificationToken.setExpireDate(Instant.now().plus(1, ChronoUnit.DAYS));
         return token;
+    }
+
+    public void verifyAccount(String token) {
+        Optional<VerificationToken> verificationToken = _verificationTokenRepository.findByToken(token);
+        verificationToken.orElseThrow(() -> new SpacesException("Invalid Token"));
+        fetchUserAndEnable(verificationToken.get());
+
+    }
+
+    private void fetchUserAndEnable(VerificationToken verificationToken) {
+        String username = verificationToken.getUser().getUsername();
+        User user = _userRepository.findByUsername(username).orElseThrow(() -> new SpacesException("User Not Found with name : " + username));
+        user.setEnabled(true);
+        _userRepository.save(user);
+
     }
 }
