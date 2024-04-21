@@ -1,6 +1,7 @@
 package com.BrycesCode.Spaces.service;
 
 import com.BrycesCode.Spaces.dto.RegisterRequest;
+import com.BrycesCode.Spaces.model.NotificationEmail;
 import com.BrycesCode.Spaces.model.User;
 import com.BrycesCode.Spaces.model.VerificationToken;
 import com.BrycesCode.Spaces.repository.UserRepository;
@@ -16,18 +17,19 @@ import java.util.UUID;
 @Transactional
 public class AuthService {
 
-    private PasswordEncoder _passwordEncoder;
+    private final PasswordEncoder _passwordEncoder;
 
-    private UserRepository _userRepository;
+    private final UserRepository _userRepository;
 
-    private VerificationTokenRepository _verificationTokenRepository;
+    private final VerificationTokenRepository _verificationTokenRepository;
+    private final MailService _mailService;
 
-    public AuthService(PasswordEncoder passwordEncoder, UserRepository userRepository, VerificationTokenRepository verificationTokenRepository) {
+    public AuthService(PasswordEncoder passwordEncoder, UserRepository userRepository, VerificationTokenRepository verificationTokenRepository, MailService mailService) {
         _passwordEncoder = passwordEncoder;
         _userRepository = userRepository;
         _verificationTokenRepository = verificationTokenRepository;
+        _mailService = mailService;
     }
-
     public void signup(RegisterRequest registerRequest){
         User user = new User();
         user.setUsername(registerRequest.getUsername().toLowerCase());
@@ -37,7 +39,14 @@ public class AuthService {
         user.setEnabled(false);
 
         _userRepository.save(user);
+
         String token = generateVerificationToken(user);
+        _mailService.sendMail(new NotificationEmail("Please Activate your Account",
+                user.getEmail(), "Thank you for signing up for Spaces!," +
+                "please click the link below to activate your account : " +
+                "http://localhost:8080/api/auth/accountVerification/" + token));
+
+
     }
 
     private String generateVerificationToken(User user) {
